@@ -623,6 +623,33 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(author.age, 25)
 
         BlogPost.drop_collection()
+    
+    # For some reason, it seems to matter whether this test is run with an
+    # absolutely fresh database or not.  On a database on which you have
+    # previously run the test suite, this test may pass.  On a brand new
+    # database, it fails.
+    def test_unique_and_indexes(self):
+        """Ensure that 'unique' constraints aren't overridden by
+        meta.indexes.
+        """
+        class Customer(Document):
+            cust_id = IntField(unique=True, required=True)
+            meta = {
+                'indexes': ['cust_id'],
+                'allow_inheritance': False,
+            }
+
+        cust = Customer(cust_id=1)
+        cust.save()
+
+        cust_dupe = Customer(cust_id=1)
+        try:
+            cust_dupe.save()
+            raise AssertionError, "We saved a dupe!"
+        except OperationError:
+            pass
+        Customer.drop_collection()
+
 
     def tearDown(self):
         self.Person.drop_collection()
